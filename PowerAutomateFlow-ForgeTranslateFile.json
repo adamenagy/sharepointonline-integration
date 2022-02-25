@@ -1,0 +1,199 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "adamnagy_sharedsharepointonline_7a96d"
+        },
+        "api": { "name": "shared_sharepointonline" }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": { "defaultValue": {}, "type": "Object" },
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+      },
+      "triggers": {
+        "When_a_file_is_created_(properties_only)": {
+          "recurrence": { "interval": 1, "frequency": "Minute" },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "96fe11cd-4ab0-4e76-be32-6961a73dd0c8"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetOnNewFileItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://share.autodesk.com/sites/ForgeTest",
+              "table": "6b0e28f3-fa1e-4516-8d78-b6d88c217782",
+              "folderPath": "/Shared Documents"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "HTTP_Get_Access_Token": {
+          "runAfter": { "Initialize_variable_2": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "d062c0af-fab6-497b-8b7d-2bacf694b930"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "https://developer.api.autodesk.com/authentication/v1/authenticate",
+            "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+            "body": "client_id=&client_secret=&grant_type=client_credentials&scope=data:read%20data:write"
+          }
+        },
+        "HTTP_Upload_File": {
+          "runAfter": { "Get_file_content": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "01317225-53d5-4f8d-bb54-7b1b64abd122"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "PUT",
+            "uri": "@variables('file_url')",
+            "headers": { "Authorization": "@variables('access_token')" },
+            "body": "@body('Get_file_content')"
+          }
+        },
+        "Initialize_variable": {
+          "runAfter": { "HTTP_Get_Access_Token": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "45ad5626-19e9-4762-b828-9566e3115caa"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "access_token",
+                "type": "string",
+                "value": "@{concat('Bearer ', body('HTTP_Get_Access_Token').access_token)}"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_2": {
+          "runAfter": { "Update_file_properties_(first)": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "b0c74344-1469-4e14-b079-d86eb42cce57"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "file_url",
+                "type": "string",
+                "value": "@{concat('https://developer.api.autodesk.com/oss/v2/buckets/adam_sharepoint/objects/', triggerOutputs()?['body/{FilenameWithExtension}'])}"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_3": {
+          "runAfter": { "HTTP_Upload_File": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "df758577-719a-4cc8-a2e6-30d778952ebe"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "urn",
+                "type": "string",
+                "value": "@{base64(body('HTTP_Upload_File').objectId)}"
+              }
+            ]
+          }
+        },
+        "HTTP_Translate": {
+          "runAfter": { "Initialize_variable_3": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "a49be637-6f7e-4303-ae5a-a7daf0d15bc4"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "https://developer.api.autodesk.com/modelderivative/v2/designdata/job",
+            "headers": {
+              "Authorization": "@variables('access_token')",
+              "Content-Type": "application/json"
+            },
+            "body": "@concat('{\"input\": { \"urn\": \"', variables('urn'), '\" }, \"output\": { \"destination\": { \"region\": \"us\" }, \"formats\": [ { \"type\": \"svf2\", \"views\": [ \"2d\", \"3d\" ] } ] } }')"
+          }
+        },
+        "Update_file_properties_(final)": {
+          "runAfter": { "HTTP_Translate": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "0c607f5e-9872-44de-911a-125319fde055"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "PatchFileItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://share.autodesk.com/sites/ForgeTest",
+              "table": "6b0e28f3-fa1e-4516-8d78-b6d88c217782",
+              "id": "@triggerOutputs()?['body/ID']",
+              "item/Urn": "@variables('urn')"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_file_content": {
+          "runAfter": { "Initialize_variable": ["Succeeded"] },
+          "metadata": {
+            "operationMetadataId": "4de638f2-5073-415c-8be4-dcc5d42cc8ae"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileContent",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://share.autodesk.com/sites/ForgeTest",
+              "id": "@triggerOutputs()?['body/{Identifier}']",
+              "inferContentType": true
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Update_file_properties_(first)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "ed69e8a7-c982-4f06-8b0b-3d382a90bb0c"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "PatchFileItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://share.autodesk.com/sites/ForgeTest",
+              "table": "6b0e28f3-fa1e-4516-8d78-b6d88c217782",
+              "id": "@triggerOutputs()?['body/ID']",
+              "item/Urn": "Translating ..."
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
