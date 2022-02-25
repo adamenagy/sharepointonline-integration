@@ -1,0 +1,16 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "version": "1.14.0",
+    "libraryName": "forge-test",
+    "libraryId": "ddc707bc-5e0c-476d-9aea-4f1f7c87dddd",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "forge-test",
+    "solutionShortDescription": "forge-test description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
