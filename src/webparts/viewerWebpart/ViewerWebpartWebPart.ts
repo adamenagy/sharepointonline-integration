@@ -24,16 +24,11 @@ export interface ISPList {
   Urn: string;
 }
 import { Environment, EnvironmentType } from "@microsoft/sp-core-library";
-// Forge App credentials
-const CLIENT_ID = "";
-const CLIENT_SECRET = "";
 //</new>
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
-import { IReadonlyTheme } from "@microsoft/sp-component-base";
 
 import styles from "./ViewerWebpartWebPart.module.scss";
 import * as strings from "ViewerWebpartWebPartStrings";
-import { useControlledState } from "@uifabric/foundation";
 
 export interface IViewerWebpartWebPartProps {
   description: string;
@@ -102,13 +97,13 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
   }
   private _renderList(items: ISPList[]): void {
     let html: string =
-      '<table border=1 width=100% style="border-collapse: collapse; table-layout: fixed;">';
+      '<table>';
     html += "<th>File Name</th><th>Urn</th>";
     items.forEach((item: ISPList) => {
       html += `
         <tr>            
-          <td style="cursor: pointer">${item.File.Name}</td>
-          <td style="word-wrap: break-word;">${item.Urn ? item.Urn : ''}</td> 
+          <td>${item.File.Name}</td>
+          <td>${item.Urn ? item.Urn : ''}</td> 
         </tr>
       `;
     });
@@ -131,10 +126,10 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
             this.properties.accessToken
           );
         } else {
-          console.log('File not translated yet')
+          console.log('File not translated yet');
         }
-      })
-    })
+      });
+    });
   }
   //</new>
 
