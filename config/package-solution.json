@@ -3,7 +3,7 @@
   "solution": {
     "name": "forge-test-client-side-solution",
     "id": "ddc707bc-5e0c-476d-9aea-4f1f7c87dddd",
-    "version": "1.0.0.2",
+    "version": "1.0.0.3",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,

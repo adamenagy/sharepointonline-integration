@@ -24,8 +24,11 @@ export interface ISPList {
   Urn: string;
 }
 import { Environment, EnvironmentType } from "@microsoft/sp-core-library";
+const CLIENT_ID = "";
+const CLIENT_SECRET = "";
 //</new>
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
+import { IReadonlyTheme } from "@microsoft/sp-component-base";
 
 import styles from "./ViewerWebpartWebPart.module.scss";
 import * as strings from "ViewerWebpartWebPartStrings";
@@ -48,6 +51,30 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
   }
 
   //<new>
+  private _monitorPage(): void {
+    let displayedUrn = '';
+    setInterval(() => {
+      try {
+        let sources = this.context.dynamicDataProvider.getAvailableSources();
+        let source = sources.filter(item => {
+          return (item.metadata.alias === 'ListWebPart')
+        })[0];
+      
+        source.getPropertyValueAsync("selectedItems").then(val => {
+          if (val[0].Urn.substring(0, 2) !== 'dX' || val[0].Urn === displayedUrn) 
+            return;
+
+          displayedUrn = val[0].Urn;
+          viewer.launchViewer(
+            displayedUrn,
+            null,
+            this.properties.accessToken
+          );
+        });
+      } catch {}
+    }, 1000);
+  }
+
   private _getAccessToken(): void {
     SPComponentLoader.loadScript(
       "https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"
@@ -73,64 +100,6 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
         });
       });
   }
-
-  private _getListData(): Promise<ISPLists> {
-    return this.context.spHttpClient
-      .get(
-        this.context.pageContext.web.absoluteUrl +
-          "/_api/web/lists/GetByTitle('Documents')/Items?$select=File/Name,Urn&$expand=File",
-        SPHttpClient.configurations.v1
-      )
-      .then((response: SPHttpClientResponse) => {
-        return response.json();
-      });
-  }
-  private _renderListAsync(): void {
-    if (
-      Environment.type == EnvironmentType.SharePoint ||
-      Environment.type == EnvironmentType.ClassicSharePoint
-    ) {
-      this._getListData().then((response) => {
-        this._renderList(response.value);
-      });
-    }
-  }
-  private _renderList(items: ISPList[]): void {
-    let html: string =
-      '<table>';
-    html += "<th>File Name</th><th>Urn</th>";
-    items.forEach((item: ISPList) => {
-      html += `
-        <tr>            
-          <td>${item.File.Name}</td>
-          <td>${item.Urn ? item.Urn : ''}</td> 
-        </tr>
-      `;
-    });
-    html += "</table>";
-
-    const listContainer: Element =
-      this.domElement.querySelector("#spListContainer");
-    listContainer.innerHTML = html;
-
-    this.domElement.querySelectorAll("tr").forEach(tr => {
-      tr.addEventListener("click", (e: Event) => {
-        let trElem: any = e.currentTarget;
-        let tdElems = trElem.querySelectorAll("td");
-        let text: string = tdElems.item(1).textContent;
-        console.log(text);
-        if (text.substring(0, 2) === 'dX') {
-          viewer.launchViewer(
-            text,
-            null,
-            this.properties.accessToken
-          );
-        } else {
-          console.log('File not translated yet');
-        }
-      });
-    });
-  }
   //</new>
 
   public render(): void {
@@ -140,10 +109,9 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
       !!this.context.sdks.microsoftTeams ? styles.teams : ""
     }">
       <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css" type="text/css">
-      <div id="spListContainer" class="${styles.documentsList}"></div>
       <div id="forgeViewer" class="${styles.forgeViewer}"></div>
     </section>`;
-    this._renderListAsync();
+    this._monitorPage();
   }
 
   private _getEnvironmentMessage(): string {
