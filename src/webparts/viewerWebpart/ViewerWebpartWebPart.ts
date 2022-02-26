@@ -30,6 +30,9 @@ import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import styles from "./ViewerWebpartWebPart.module.scss";
 import * as strings from "ViewerWebpartWebPartStrings";
 
+const CLIENT_ID = "";
+const CLIENT_SECRET = "";
+
 export interface IViewerWebpartWebPartProps {
   description: string;
   //<new>
