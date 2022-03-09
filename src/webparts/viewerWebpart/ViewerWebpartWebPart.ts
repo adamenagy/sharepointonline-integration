@@ -14,16 +14,6 @@ const viewer: any = require("./ForgeViewer.js");
 export interface IGetSpListItemsWebPartProps {
   description: string;
 }
-export interface ISPLists {
-  value: ISPList[];
-}
-export interface ISPList {
-  File: {
-    Name: string;
-  };
-  Urn: string;
-}
-import { Environment, EnvironmentType } from "@microsoft/sp-core-library";
 const CLIENT_ID = "";
 const CLIENT_SECRET = "";
 //</new>
@@ -57,19 +47,21 @@ export default class ViewerWebpartWebPart extends BaseClientSideWebPart<IViewerW
       try {
         let sources = this.context.dynamicDataProvider.getAvailableSources();
         let source = sources.filter(item => {
-          return (item.metadata.alias === 'ListWebPart')
+          return (item.metadata.alias === 'ListWebPart');
         })[0];
-      
-        source.getPropertyValueAsync("selectedItems").then(val => {
-          if (val[0].Urn.substring(0, 2) !== 'dX' || val[0].Urn === displayedUrn) 
-            return;
 
-          displayedUrn = val[0].Urn;
-          viewer.launchViewer(
-            displayedUrn,
-            null,
-            this.properties.accessToken
-          );
+        source.getPropertyValueAsync("selectedItems").then(val => {
+          try {
+            if (val[0].Urn.substring(0, 2) !== 'dX' || val[0].Urn === displayedUrn) 
+              return;
+
+            displayedUrn = val[0].Urn;
+            viewer.launchViewer(
+              displayedUrn,
+              null,
+              this.properties.accessToken
+            );
+          } catch {}
         });
       } catch {}
     }, 1000);
